@@ -3,7 +3,8 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
-    "tools-gpt": "./packages/tools-gpt/src/graph.ts:graph"
+    "tools-gpt": "./src/tools-gpt/graph.ts:graph",
+    "multi-agent": "./src/multi-agent/graph.ts:graph"
   },
   "env": ".env"
 }

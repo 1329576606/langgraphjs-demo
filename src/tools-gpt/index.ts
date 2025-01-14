@@ -1,8 +1,11 @@
+import {config} from "dotenv";
+import path from "node:path";
+config({path: path.resolve(__dirname, '../../.env')});
+
 import {HumanMessage} from "@langchain/core/messages";
-import {config} from 'dotenv';
 import {graph} from "./graph";
 
-config();
+
 (async function main() {
     const finalState = await graph.invoke(
         {messages: [new HumanMessage("什么是LangChain？")]},

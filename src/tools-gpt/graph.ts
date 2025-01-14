@@ -2,11 +2,9 @@ import {AIMessage} from "@langchain/core/messages";
 import {END, MemorySaver, START, StateGraph} from "@langchain/langgraph";
 import {ToolNode} from "@langchain/langgraph/prebuilt";
 import {ChatOpenAI} from "@langchain/openai";
-import {config} from 'dotenv';
 import {GraphAnnotation} from "./state";
 import {tools} from "./tools";
 
-config();
 
 const toolNode = new ToolNode(tools);
 
@@ -61,4 +59,4 @@ const checkpointer = new MemorySaver();
 // This compiles it into a LangChain Runnable.
 // Note that we're (optionally) passing the memory when compiling the graph
 export const graph = builder.compile({checkpointer});
-graph.name = "MemoryAgent";
+graph.name = "ToolsAgent";
