@@ -1,10 +1,14 @@
 {
-  "node_version": "20",
   "dockerfile_lines": [],
-  "dependencies": ["."],
   "graphs": {
     "tools-gpt": "./src/tools-gpt/graph.ts:graph",
     "multi-agent": "./src/multi-agent/graph.ts:graph"
   },
-  "env": ".env"
+  "env": [
+    "OPENAI_API_KEY",
+    "OPENAPI_URL",
+    "MODULE",
+    "TAVILY_API_KEY"
+  ],
+  "node_version": "20"
 }
