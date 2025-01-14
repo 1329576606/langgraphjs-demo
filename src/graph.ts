@@ -1,37 +1,17 @@
 import { AIMessage } from "@langchain/core/messages";
-import { tool } from "@langchain/core/tools";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { config } from 'dotenv';
-import { z } from "zod";
-import { ConfigurationAnnotation } from "./configuration";
 import { GraphAnnotation } from "./state";
+import { tools } from "./tools";
 config();
 
-// Define the tools for the agent to use
-const weatherTool = tool(async ({ query }) => {
-  console.log(`\n\nweatherTool:\n ${query}`);
-  // This is a placeholder for the actual implementation
-  if (query.toLowerCase().includes("sf") || query.toLowerCase().includes("san francisco")) {
-    return "It's 60 degrees and foggy."
-  }
-  return "It's 90 degrees and sunny."
-}, {
-  name: "weather",
-  description:
-    "Call to get the current weather for a location.",
-  schema: z.object({
-    query: z.string().describe("The query to use in your search."),
-  }),
-});
-
-const tools = [weatherTool];
 const toolNode = new ToolNode(tools);
 
-const model = new ChatOpenAI({
+const llm = new ChatOpenAI({
   model: process.env["MODULE"],
-  temperature: 0
+  temperature: 0,
 }, {
   apiKey: process.env['OPENAI_API_KEY'],
   baseURL: process.env["OPENAPI_URL"],
@@ -58,7 +38,7 @@ async function callModel(state: typeof GraphAnnotation.State) {
   console.log(`\n\ncallModel state:\n ${JSON.stringify(state)}`);
 
   const messages = state.messages;
-  const response = await model.invoke(messages);
+  const response = await llm.invoke(messages);
   console.log("callModel response\n", JSON.stringify(response));
 
   // We return a list, because this will get added to the existing list

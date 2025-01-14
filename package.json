@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/anthropic": "^0.3.11",
+    "@langchain/community": "^0.3.24",
     "@langchain/core": "^0.3.29",
     "@langchain/langgraph": "^0.2.39",
     "@langchain/openai": "^0.3.17",

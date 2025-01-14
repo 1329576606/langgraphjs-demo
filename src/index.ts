@@ -4,7 +4,7 @@ import { graph } from "./graph";
 config();
 (async function main() {
   const finalState = await graph.invoke(
-    { messages: [new HumanMessage("what is the weather in sf")] },
+    { messages: [new HumanMessage("什么是LangChain？")] },
     { configurable: { thread_id: "42" } }
   );
 
