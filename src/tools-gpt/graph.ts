@@ -11,7 +11,7 @@ const toolNode = new ToolNode(tools);
 const llm = new ChatOpenAI({
     model: process.env["MODULE"],
     temperature: 0,
-    // verbose: true
+    verbose: true
 }, {
     apiKey: process.env['OPENAI_API_KEY'],
     baseURL: process.env["OPENAPI_URL"],
@@ -20,7 +20,7 @@ const llm = new ChatOpenAI({
 // Define the function that determines whether to continue or not
 // We can extract the state typing via `GraphAnnotation.State`
 function shouldContinue(state: typeof GraphAnnotation.State) {
-    console.log(`\n\nshouldContinue state:\n ${JSON.stringify(state)}`);
+    // console.log(`\n\nshouldContinue state:\n ${JSON.stringify(state)}`);
 
     const messages = state.messages;
     const lastMessage = messages[messages.length - 1] as AIMessage;
@@ -35,11 +35,11 @@ function shouldContinue(state: typeof GraphAnnotation.State) {
 
 // Define the function that calls the model
 async function callModel(state: typeof GraphAnnotation.State) {
-    console.log(`\n\ncallModel state:\n ${JSON.stringify(state)}`);
+    // console.log(`\n\ncallModel state:\n ${JSON.stringify(state)}`);
 
     const messages = state.messages;
     const response = await llm.invoke(messages);
-    console.log("callModel response\n", JSON.stringify(response));
+    // console.log("callModel response\n", JSON.stringify(response));
 
     // We return a list, because this will get added to the existing list
     return {messages: [response]};

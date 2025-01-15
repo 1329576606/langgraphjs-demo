@@ -2,14 +2,15 @@ import {config} from "dotenv";
 import path from "node:path";
 config({path: path.resolve(__dirname, '../../.env')});
 
-import {HumanMessage} from "@langchain/core/messages";
+// import
 import {graph} from "./graph";
+import {HumanMessage} from "@langchain/core/messages";
 
 
 (async function main() {
     const finalState = await graph.invoke(
-        {messages: [new HumanMessage("什么是LangChain？")]},
-        {configurable: {thread_id: "42"}}
+        {messages: [new HumanMessage("帮我检查'src/tools-gpt'目录下的代码是否存在安全隐患")]},
+        {configurable: {thread_id: "42"}},
     );
 
     console.log(finalState.messages[finalState.messages.length - 1].content);

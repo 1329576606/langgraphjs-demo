@@ -1,6 +1,7 @@
-import {WikipediaQueryRun} from "@langchain/community/tools/wikipedia_query_run";
 import {RunnableToolLike} from "@langchain/core/runnables";
 import {StructuredToolInterface} from "@langchain/core/tools";
+import {fileReadTool} from "../../tools/file/file-read";
+import {dirReadTool} from "../../tools";
 
 const tools: Array<StructuredToolInterface | RunnableToolLike> = [];
 
@@ -22,8 +23,8 @@ const tools: Array<StructuredToolInterface | RunnableToolLike> = [];
 // });
 // tools.push(weatherTool)
 
-const wikipediaTool = new WikipediaQueryRun();
-tools.push(wikipediaTool)
+// const wikipediaTool = new WikipediaQueryRun();
+tools.push(fileReadTool, dirReadTool);
 
 
 export {tools};
