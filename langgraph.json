@@ -4,11 +4,6 @@
     "tools-gpt": "./src/tools-gpt/graph.ts:graph",
     "multi-agent": "./src/multi-agent/graph.ts:graph"
   },
-  "env": [
-    "OPENAI_API_KEY",
-    "OPENAPI_URL",
-    "MODULE",
-    "TAVILY_API_KEY"
-  ],
+  "env": ".env",
   "node_version": "20"
 }

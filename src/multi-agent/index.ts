@@ -1,6 +1,4 @@
-import {config} from "dotenv";
-import path from "node:path";
-config({path: path.resolve(__dirname, '../../.env')});
+import "../env";
 
 import {HumanMessage} from "@langchain/core/messages";
 import {graph} from "./graph";
