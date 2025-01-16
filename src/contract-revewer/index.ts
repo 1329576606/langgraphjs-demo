@@ -1,12 +1,12 @@
 import "../env"
 // import
+import * as fs from "node:fs";
 import {readFileSync} from "node:fs";
 import {removeEnter, removeSolidityComments, removeWhitespace} from "./utiils";
 
 // 使用multi-agent
 import {graph} from "./impl/multi-agent/graph";
 import path from "node:path";
-import * as fs from "node:fs";
 
 
 const contractPath = path.resolve(__dirname, './data/CVE/2018-10706.sol');
@@ -27,8 +27,12 @@ const param = {
 
 (async function () {
     const res = await graph.invoke(param, {recursionLimit: 150});
-    fs.writeFileSync(path.resolve(__dirname, './data/AuditResult.json'),JSON.stringify(res.auditResult),{encoding:'utf-8'});
-    fs.writeFileSync(path.resolve(__dirname, './data/MultiLanguageAuditResult.json'),JSON.stringify(res.multiLanguageAuditResult),{encoding:'utf-8'});
+    fs.writeFileSync(path.resolve(__dirname, './data/AuditOutput.json'), JSON.stringify(res.auditOutput, null, 4), {encoding: 'utf-8'});
+    fs.writeFileSync(path.resolve(__dirname, './data/CriticOutput.json'), JSON.stringify(res.criticOutput, null, 4), {encoding: 'utf-8'});
+    if (res.multiLanguageCriticOutput) {
+        fs.writeFileSync(path.resolve(__dirname, './data/MultiLanguageCriticOutput.json'), JSON.stringify(res.multiLanguageCriticOutput, null, 4), {encoding: 'utf-8'});
+    }
+
 })();
 
 
@@ -63,15 +67,15 @@ const param = {
 //             })
 //         }
 //
-//         if ("auditResult" in firstItem) {
+//         if ("auditOutput" in firstItem) {
 //             console.log({
-//                 auditResult: JSON.stringify(firstItem.auditResult),
+//                 auditOutput: JSON.stringify(firstItem.auditOutput),
 //             })
 //         }
 //
-//         if ("multiLanguageAuditResult" in firstItem) {
+//         if ("multiLanguageCriticOutput" in firstItem) {
 //             console.log({
-//                 multiLanguageAuditResult: JSON.stringify(firstItem.multiLanguageAuditResult),
+//                 multiLanguageCriticOutput: JSON.stringify(firstItem.multiLanguageCriticOutput),
 //             })
 //         }
 //     }

@@ -1,0 +1,145 @@
+[
+    {
+        "function_name": "approveAndCall",
+        "vulnerability": "Reentrancy vulnerability",
+        "criticism": "The reasoning is correct. The function calls an external contract without any checks or safeguards, which could lead to reentrancy attacks if the external contract is malicious. The severity is high because reentrancy attacks can lead to significant loss of funds. The profitability is high as an attacker could exploit this to drain funds.",
+        "correctness": 9,
+        "severity": 9,
+        "profitability": 9,
+        "code": "function approveAndCall(address _spender, uint256 _amount, bytes _extraData) public returns (bool success) {\n    require(approve(_spender, _amount));\n    ApproveAndCallReceiver(_spender).receiveApproval(\n        msg.sender,\n        _amount,\n        this,\n        _extraData\n    );\n    return true;\n}",
+        "reason": "The function calls an external contract without any checks or safeguards, which could lead to reentrancy attacks if the external contract is malicious.",
+        "final_score": 9
+    },
+    {
+        "function_name": "unFreeze",
+        "vulnerability": "Potential reentrancy",
+        "criticism": "The reasoning is correct. The function modifies state after an external call (emit), which could be exploited in a reentrancy attack if the external call is malicious. The severity is high because reentrancy attacks can lead to significant loss of funds. The profitability is high as an attacker could exploit this to drain funds.",
+        "correctness": 9,
+        "severity": 9,
+        "profitability": 9,
+        "code": "function unFreeze(uint8 _step) onlyOwner public returns (bool unlockOver) {\n    uint8 _end = lastFreezeSeq[_step];\n    require(_end > 0);\n    unlockOver=false;\n    uint8 _start=0;\n    for(; _end>_start; _end--){\n        FreezeInfo storage fInfo = freezeOf[_step][_end-1];\n        uint256 _amount = fInfo.amount;\n        balanceOf[fInfo.user] += _amount;\n        delete freezeOf[_step][_end-1];\n        lastFreezeSeq[_step]--;\n        emit Unfreeze(fInfo.user, _amount);\n    }\n}",
+        "reason": "The function modifies state after an external call (emit), which could be exploited in a reentrancy attack if the external call is malicious.",
+        "final_score": 9
+    },
+    {
+        "function_name": "fallback function",
+        "vulnerability": "Reentrancy vulnerability",
+        "criticism": "The reasoning is correct. The function sends Ether to an external address (vaultAddress) without any checks or safeguards, which could lead to reentrancy attacks if the external address is malicious. The severity is high because reentrancy attacks can lead to significant loss of funds. The profitability is high as an attacker could exploit this to drain funds.",
+        "correctness": 9,
+        "severity": 9,
+        "profitability": 9,
+        "code": "function() payable public {\n    require(!paused);\n    address _user=msg.sender;\n    uint256 tokenValue;\n    if(msg.value==0){\n        require(airdropQty>0);\n        require(airdropTotalQty>=airdropQty);\n        require(airdropOf[_user]==0);\n        tokenValue=airdropQty*10**uint256(decimals);\n        airdropOf[_user]=tokenValue;\n        airdropTotalQty-=airdropQty;\n        require(_generateTokens(_user, tokenValue));\n        emit Payment(_user, msg.value, tokenValue);\n    }else{\n        require(msg.value >= minFunding);\n        require(msg.value % 1 ether==0);\n        totalCollected +=msg.value;\n        require(vaultAddress.send(msg.value));\n        tokenValue = (msg.value/1 ether)*(tokensPerEther*10 ** uint256(decimals));\n        require(_generateTokens(_user, tokenValue));\n        uint256 lock1 = tokenValue / 5;\n        require(_freeze(_user, lock1, 0));\n        _freeze(_user, lock1, 1);\n        _freeze(_user, lock1, 2);\n        _freeze(_user, lock1, 3);\n        emit Payment(_user, msg.value, tokenValue);\n    }\n}",
+        "reason": "The function sends Ether to an external address (vaultAddress) without any checks or safeguards, which could lead to reentrancy attacks if the external address is malicious.",
+        "final_score": 9
+    },
+    {
+        "function_name": "transferFrom",
+        "vulnerability": "Incorrect allowance update",
+        "criticism": "The reasoning is correct. The function incorrectly updates the allowance by adding the transferred value instead of subtracting it. This allows the spender to spend more than the approved amount, leading to potential loss of funds. The severity is high because it directly affects the token balance and allowance. The profitability is moderate as an attacker could exploit this to spend more tokens than allowed.",
+        "correctness": 9,
+        "severity": 8,
+        "profitability": 6,
+        "code": "function transferFrom(address _from, address _to, uint256 _value) realUser(_from) realUser(_to) moreThanZero(_value) public returns (bool success) {\n    require(balanceOf[_from] >= _value);\n    require(balanceOf[_to] + _value > balanceOf[_to]);\n    require(_value <= allowance[_from][msg.sender]);\n    balanceOf[_from] = balanceOf[_from] - _value;\n    balanceOf[_to] = balanceOf[_to] + _value;\n    allowance[_from][msg.sender] = allowance[_from][msg.sender] + _value;\n    emit Transfer(_from, _to, _value);\n    return true;\n}",
+        "reason": "The function incorrectly updates the allowance by adding the transferred value instead of subtracting it. This allows the spender to spend more than the approved amount, leading to potential loss of funds.",
+        "final_score": 8
+    },
+    {
+        "function_name": "transferMulti",
+        "vulnerability": "Integer overflow/underflow",
+        "criticism": "The reasoning is correct. The function does not use SafeMath or similar protections, making it vulnerable to integer overflow/underflow attacks, which could lead to incorrect token balances. The severity is high because it can result in incorrect token balances. The profitability is moderate as an attacker could exploit this to manipulate token balances.",
+        "correctness": 9,
+        "severity": 8,
+        "profitability": 6,
+        "code": "function transferMulti(address[] _to, uint256[] _value) public returns (uint256 amount){\n    require(_to.length == _value.length);\n    uint8 len = uint8(_to.length);\n    for(uint8 j; j<len; j++){\n        amount += _value[j]*10**uint256(decimals);\n    }\n    require(balanceOf[msg.sender] >= amount);\n    for(uint8 i; i<len; i++){\n        address _toI = _to[i];\n        uint256 _valueI = _value[i]*10**uint256(decimals);\n        balanceOf[_toI] += _valueI;\n        balanceOf[msg.sender] -= _valueI;\n        emit Transfer(msg.sender, _toI, _valueI);\n    }\n}",
+        "reason": "The function does not use SafeMath or similar protections, making it vulnerable to integer overflow/underflow attacks, which could lead to incorrect token balances.",
+        "final_score": 8
+    },
+    {
+        "function_name": "changeOwner",
+        "vulnerability": "Potential loss of funds",
+        "criticism": "The reasoning is correct. The function transfers all tokens from the current owner to the new owner without any checks, which could lead to loss of funds if the new owner address is invalid or malicious. The severity is high because it directly affects the token balance. The profitability is moderate as an attacker could exploit this to gain control of the tokens.",
+        "correctness": 9,
+        "severity": 8,
+        "profitability": 6,
+        "code": "function changeOwner(address newOwner) onlyOwner public returns (bool) {\n    balanceOf[newOwner] += balanceOf[owner];\n    balanceOf[owner] = 0;\n    owner = newOwner;\n    return true;\n}",
+        "reason": "The function transfers all tokens from the current owner to the new owner without any checks, which could lead to loss of funds if the new owner address is invalid or malicious.",
+        "final_score": 8
+    },
+    {
+        "function_name": "freeze",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _step parameter, which could lead to unexpected behavior or vulnerabilities if an invalid step is provided. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function freeze(address _user, uint256 _value, uint8 _step) moreThanZero(_value) onlyController public returns (bool success) {\n    _value=_value*10**uint256(decimals);\n    return _freeze(_user,_value,_step);\n}",
+        "reason": "The function does not validate the _step parameter, which could lead to unexpected behavior or vulnerabilities if an invalid step is provided.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "generateTokens",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _user address, which could lead to tokens being generated for invalid or malicious addresses. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function generateTokens(address _user, uint _amount) onlyController public returns (bool) {\n    _amount=_amount*10**uint256(decimals);\n    return _generateTokens(_user,_amount);\n}",
+        "reason": "The function does not validate the _user address, which could lead to tokens being generated for invalid or malicious addresses.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "destroyTokens",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _user address, which could lead to tokens being destroyed for invalid or malicious addresses. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function destroyTokens(address _user, uint256 _amount) onlyOwner public returns (bool) {\n    _amount=_amount*10**uint256(decimals);\n    return _destroyTokens(_user,_amount);\n}",
+        "reason": "The function does not validate the _user address, which could lead to tokens being destroyed for invalid or malicious addresses.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "changeTokensPerEther",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _newRate parameter, which could lead to unexpected behavior or vulnerabilities if an invalid rate is provided. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function changeTokensPerEther(uint256 _newRate) onlyController public {\n    tokensPerEther = _newRate;\n}",
+        "reason": "The function does not validate the _newRate parameter, which could lead to unexpected behavior or vulnerabilities if an invalid rate is provided.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "changeAirdropQty",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _airdropQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function changeAirdropQty(uint256 _airdropQty) onlyController public {\n    airdropQty = _airdropQty;\n}",
+        "reason": "The function does not validate the _airdropQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "changeAirdropTotalQty",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _airdropTotalQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function changeAirdropTotalQty(uint256 _airdropTotalQty) onlyController public {\n    uint256 _token =_airdropTotalQty*10**uint256(decimals);\n    require(balanceOf[owner] >= _token);\n    airdropTotalQty = _airdropTotalQty;\n}",
+        "reason": "The function does not validate the _airdropTotalQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided.",
+        "final_score": 5.25
+    },
+    {
+        "function_name": "changePaused",
+        "vulnerability": "Lack of input validation",
+        "criticism": "The reasoning is correct. The function does not validate the _paused parameter, which could lead to unexpected behavior or vulnerabilities if an invalid value is provided. The severity is moderate because it depends on the input provided. The profitability is low as it is not directly exploitable for profit.",
+        "correctness": 7,
+        "severity": 5,
+        "profitability": 2,
+        "code": "function changePaused(bool _paused) onlyController public {\n    paused = _paused;\n}",
+        "reason": "The function does not validate the _paused parameter, which could lead to unexpected behavior or vulnerabilities if an invalid value is provided.",
+        "final_score": 5.25
+    }
+]
