@@ -1,80 +1,116 @@
 [
     {
         "function_name": "transferFrom",
-        "code": "function transferFrom(address _from, address _to, uint256 _value) realUser(_from) realUser(_to) moreThanZero(_value) public returns (bool success) {\n    require(balanceOf[_from] >= _value);\n    require(balanceOf[_to] + _value > balanceOf[_to]);\n    require(_value <= allowance[_from][msg.sender]);\n    balanceOf[_from] = balanceOf[_from] - _value;\n    balanceOf[_to] = balanceOf[_to] + _value;\n    allowance[_from][msg.sender] = allowance[_from][msg.sender] + _value;\n    emit Transfer(_from, _to, _value);\n    return true;\n}",
-        "vulnerability": "Incorrect allowance update",
-        "reason": "The function incorrectly updates the allowance by adding the transferred value instead of subtracting it. This allows the spender to spend more than the approved amount, leading to potential loss of funds."
-    },
-    {
-        "function_name": "approveAndCall",
-        "code": "function approveAndCall(address _spender, uint256 _amount, bytes _extraData) public returns (bool success) {\n    require(approve(_spender, _amount));\n    ApproveAndCallReceiver(_spender).receiveApproval(\n        msg.sender,\n        _amount,\n        this,\n        _extraData\n    );\n    return true;\n}",
-        "vulnerability": "Reentrancy vulnerability",
-        "reason": "The function calls an external contract without any checks or safeguards, which could lead to reentrancy attacks if the external contract is malicious."
+        "code": "function transferFrom(address _from, address _to, uint256 _value) realUser(_from) realUser(_to) moreThanZero(_value) public returns (bool success) { require(balanceOf[_from] >= _value); require(balanceOf[_to] + _value > balanceOf[_to]); require(_value <= allowance[_from][msg.sender]); balanceOf[_from] = balanceOf[_from] - _value; balanceOf[_to] = balanceOf[_to] + _value; allowance[_from][msg.sender] = allowance[_from][msg.sender] + _value; emit Transfer(_from, _to, _value); return true; }",
+        "vulnerability": "Allowance Race Condition (Front Running)",
+        "reason": "The function does not update the allowance before transferring tokens. This can lead to a front-running attack where an attacker could drain the tokens before the original spender's transaction is confirmed."
     },
     {
         "function_name": "transferMulti",
-        "code": "function transferMulti(address[] _to, uint256[] _value) public returns (uint256 amount){\n    require(_to.length == _value.length);\n    uint8 len = uint8(_to.length);\n    for(uint8 j; j<len; j++){\n        amount += _value[j]*10**uint256(decimals);\n    }\n    require(balanceOf[msg.sender] >= amount);\n    for(uint8 i; i<len; i++){\n        address _toI = _to[i];\n        uint256 _valueI = _value[i]*10**uint256(decimals);\n        balanceOf[_toI] += _valueI;\n        balanceOf[msg.sender] -= _valueI;\n        emit Transfer(msg.sender, _toI, _valueI);\n    }\n}",
-        "vulnerability": "Integer overflow/underflow",
-        "reason": "The function does not use SafeMath or similar protections, making it vulnerable to integer overflow/underflow attacks, which could lead to incorrect token balances."
+        "code": "function transferMulti(address[] _to, uint256[] _value) public returns (uint256 amount){ require(_to.length == _value.length); uint8 len = uint8(_to.length); for(uint8 j; j<len; j++){ amount += _value[j]*10**uint256(decimals); } require(balanceOf[msg.sender] >= amount); for(uint8 i; i<len; i++){ address _toI = _to[i]; uint256 _valueI = _value[i]*10**uint256(decimals); balanceOf[_toI] += _valueI; balanceOf[msg.sender] -= _valueI; emit Transfer(msg.sender, _toI, _valueI); } }",
+        "vulnerability": "Reentrancy Attack",
+        "reason": "The function does not prevent reentrancy attacks. If one of the addresses in the _to array is a malicious contract, it could call back into transferMulti and drain the tokens."
     },
     {
-        "function_name": "freeze",
-        "code": "function freeze(address _user, uint256 _value, uint8 _step) moreThanZero(_value) onlyController public returns (bool success) {\n    _value=_value*10**uint256(decimals);\n    return _freeze(_user,_value,_step);\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _step parameter, which could lead to unexpected behavior or vulnerabilities if an invalid step is provided."
+        "function_name": "approveAndCall",
+        "code": "function approveAndCall(address _spender, uint256 _amount, bytes _extraData) public returns (bool success) { require(approve(_spender, _amount)); ApproveAndCallReceiver(_spender).receiveApproval( msg.sender, _amount, this, _extraData ); return true; }",
+        "vulnerability": "Unprotected External Calls",
+        "reason": "The function calls an external contract (ApproveAndCallReceiver). If this contract is malicious, it can perform arbitrary actions, including draining tokens using the approved amount."
+    },
+    {
+        "function_name": "_freeze",
+        "code": "function _freeze(address _user, uint256 _value, uint8 _step) moreThanZero(_value) private returns (bool success) { require(balanceOf[_user] >= _value); balanceOf[_user] = balanceOf[_user] - _value; freezeOf[_step][lastFreezeSeq[_step]] = FreezeInfo({user:_user, amount:_value}); lastFreezeSeq[_step]++; emit Freeze(_user, _value); return true; }",
+        "vulnerability": "Inefficient Mapping Usage",
+        "reason": "The function uses a nested mapping for freezing tokens which can lead to higher gas costs when accessing or modifying frozen balances. This can make the contract slower and more expensive to operate."
+    },
+    {
+        "function_name": "_freeze",
+        "code": "function _freeze(address _user, uint256 _value, uint8 _step) moreThanZero(_value) private returns (bool success) { require(balanceOf[_user] >= _value); balanceOf[_user] = balanceOf[_user] - _value; freezeOf[_step][lastFreezeSeq[_step]] = FreezeInfo({user:_user, amount:_value}); lastFreezeSeq[_step]++; emit Freeze(_user, _value); return true; }",
+        "vulnerability": "No Check for Maximum Steps",
+        "reason": "The function does not check if the _step exceeds a maximum value, leading to potential issues with memory management and unexpected behavior if too many steps are used."
     },
     {
         "function_name": "unFreeze",
-        "code": "function unFreeze(uint8 _step) onlyOwner public returns (bool unlockOver) {\n    uint8 _end = lastFreezeSeq[_step];\n    require(_end > 0);\n    unlockOver=false;\n    uint8 _start=0;\n    for(; _end>_start; _end--){\n        FreezeInfo storage fInfo = freezeOf[_step][_end-1];\n        uint256 _amount = fInfo.amount;\n        balanceOf[fInfo.user] += _amount;\n        delete freezeOf[_step][_end-1];\n        lastFreezeSeq[_step]--;\n        emit Unfreeze(fInfo.user, _amount);\n    }\n}",
-        "vulnerability": "Potential reentrancy",
-        "reason": "The function modifies state after an external call (emit), which could be exploited in a reentrancy attack if the external call is malicious."
-    },
-    {
-        "function_name": "generateTokens",
-        "code": "function generateTokens(address _user, uint _amount) onlyController public returns (bool) {\n    _amount=_amount*10**uint256(decimals);\n    return _generateTokens(_user,_amount);\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _user address, which could lead to tokens being generated for invalid or malicious addresses."
-    },
-    {
-        "function_name": "destroyTokens",
-        "code": "function destroyTokens(address _user, uint256 _amount) onlyOwner public returns (bool) {\n    _amount=_amount*10**uint256(decimals);\n    return _destroyTokens(_user,_amount);\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _user address, which could lead to tokens being destroyed for invalid or malicious addresses."
-    },
-    {
-        "function_name": "changeOwner",
-        "code": "function changeOwner(address newOwner) onlyOwner public returns (bool) {\n    balanceOf[newOwner] += balanceOf[owner];\n    balanceOf[owner] = 0;\n    owner = newOwner;\n    return true;\n}",
-        "vulnerability": "Potential loss of funds",
-        "reason": "The function transfers all tokens from the current owner to the new owner without any checks, which could lead to loss of funds if the new owner address is invalid or malicious."
-    },
-    {
-        "function_name": "changeTokensPerEther",
-        "code": "function changeTokensPerEther(uint256 _newRate) onlyController public {\n    tokensPerEther = _newRate;\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _newRate parameter, which could lead to unexpected behavior or vulnerabilities if an invalid rate is provided."
-    },
-    {
-        "function_name": "changeAirdropQty",
-        "code": "function changeAirdropQty(uint256 _airdropQty) onlyController public {\n    airdropQty = _airdropQty;\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _airdropQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided."
+        "code": "function unFreeze(uint8 _step) onlyOwner public returns (bool unlockOver) { uint8 _end = lastFreezeSeq[_step]; require(_end > 0); unlockOver=false; uint8 _start=0; for(; _end>_start; _end--){ FreezeInfo storage fInfo = freezeOf[_step][_end-1]; uint256 _amount = fInfo.amount; balanceOf[fInfo.user] += _amount; delete freezeOf[_step][_end-1]; lastFreezeSeq[_step]--; emit Unfreeze(fInfo.user, _amount); } }",
+        "vulnerability": "High Gas Consumption",
+        "reason": "The function loops through all frozen tokens to unfreeze them, which can consume a large amount of gas, especially if there are many tokens frozen. This may cause the transaction to fail due to exceeding the block gas limit."
     },
     {
         "function_name": "changeAirdropTotalQty",
-        "code": "function changeAirdropTotalQty(uint256 _airdropTotalQty) onlyController public {\n    uint256 _token =_airdropTotalQty*10**uint256(decimals);\n    require(balanceOf[owner] >= _token);\n    airdropTotalQty = _airdropTotalQty;\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _airdropTotalQty parameter, which could lead to unexpected behavior or vulnerabilities if an invalid quantity is provided."
+        "code": "function changeAirdropTotalQty(uint256 _airdropTotalQty) onlyController public { uint256 _token =_airdropTotalQty*10**uint256(decimals); require(balanceOf[owner] >= _token); airdropTotalQty = _airdropTotalQty; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function updates the airdrop total quantity but does not emit an event, making it difficult for external systems to track changes to this important parameter."
+    },
+    {
+        "function_name": "changeTokensPerEther",
+        "code": "function changeTokensPerEther(uint256 _newRate) onlyController public { tokensPerEther = _newRate; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function updates the tokens per ether rate but does not emit an event, making it difficult for external systems to track changes to this important parameter."
+    },
+    {
+        "function_name": "generateTokens",
+        "code": "function generateTokens(address _user, uint _amount) onlyController public returns (bool) { _amount=_amount*10**uint256(decimals); return _generateTokens(_user,_amount); }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function generates tokens for a user but does not emit an event, making it difficult for external systems to track token generation activities."
+    },
+    {
+        "function_name": "destroyTokens",
+        "code": "function destroyTokens(address _user, uint256 _amount) onlyOwner public returns (bool) { _amount=_amount*10**uint256(decimals); return _destroyTokens(_user,_amount); }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function destroys tokens from a user but does not emit an event, making it difficult for external systems to track token destruction activities."
+    },
+    {
+        "function_name": "changeOwner",
+        "code": "function changeOwner(address newOwner) onlyOwner public returns (bool) { balanceOf[newOwner] += balanceOf[owner]; balanceOf[owner] = 0; owner = newOwner; return true; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function changes the owner of the contract but does not emit an event, making it difficult for external systems to track ownership changes."
     },
     {
         "function_name": "changePaused",
-        "code": "function changePaused(bool _paused) onlyController public {\n    paused = _paused;\n}",
-        "vulnerability": "Lack of input validation",
-        "reason": "The function does not validate the _paused parameter, which could lead to unexpected behavior or vulnerabilities if an invalid value is provided."
+        "code": "function changePaused(bool _paused) onlyController public { paused = _paused; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function changes the paused state of the contract but does not emit an event, making it difficult for external systems to track state changes."
     },
     {
-        "function_name": "fallback function",
-        "code": "function() payable public {\n    require(!paused);\n    address _user=msg.sender;\n    uint256 tokenValue;\n    if(msg.value==0){\n        require(airdropQty>0);\n        require(airdropTotalQty>=airdropQty);\n        require(airdropOf[_user]==0);\n        tokenValue=airdropQty*10**uint256(decimals);\n        airdropOf[_user]=tokenValue;\n        airdropTotalQty-=airdropQty;\n        require(_generateTokens(_user, tokenValue));\n        emit Payment(_user, msg.value, tokenValue);\n    }else{\n        require(msg.value >= minFunding);\n        require(msg.value % 1 ether==0);\n        totalCollected +=msg.value;\n        require(vaultAddress.send(msg.value));\n        tokenValue = (msg.value/1 ether)*(tokensPerEther*10 ** uint256(decimals));\n        require(_generateTokens(_user, tokenValue));\n        uint256 lock1 = tokenValue / 5;\n        require(_freeze(_user, lock1, 0));\n        _freeze(_user, lock1, 1);\n        _freeze(_user, lock1, 2);\n        _freeze(_user, lock1, 3);\n        emit Payment(_user, msg.value, tokenValue);\n    }\n}",
-        "vulnerability": "Reentrancy vulnerability",
-        "reason": "The function sends Ether to an external address (vaultAddress) without any checks or safeguards, which could lead to reentrancy attacks if the external address is malicious."
+        "function_name": "changeController",
+        "code": "function changeController(address _newController) onlyController public { controller = _newController; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function changes the controller of the contract but does not emit an event, making it difficult for external systems to track controller changes."
+    },
+    {
+        "function_name": "approve",
+        "code": "function approve(address _spender, uint256 _value) moreThanZero(_value) public returns (bool success) { allowance[msg.sender][_spender] = _value; return true; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function approves a spender but does not emit an event, making it difficult for external systems to track approval activities."
+    },
+    {
+        "function_name": "approveAndCall",
+        "code": "function approveAndCall(address _spender, uint256 _amount, bytes _extraData) public returns (bool success) { require(approve(_spender, _amount)); ApproveAndCallReceiver(_spender).receiveApproval( msg.sender, _amount, this, _extraData ); return true; }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function approves a spender and makes an external call but does not emit an event, making it difficult for external systems to track these activities."
+    },
+    {
+        "function_name": "freeze",
+        "code": "function freeze(address _user, uint256 _value, uint8 _step) moreThanZero(_value) onlyController public returns (bool success) { _value=_value*10**uint256(decimals); return _freeze(_user,_value,_step); }",
+        "vulnerability": "Lack of Event Emission",
+        "reason": "The function freezes tokens but does not emit an event, making it difficult for external systems to track freezing activities."
+    },
+    {
+        "function_name": "unFreeze",
+        "code": "function unFreeze(uint8 _step) onlyOwner public returns (bool unlockOver) { uint8 _end = lastFreezeSeq[_step]; require(_end > 0); unlockOver=false; uint8 _start=0; for(; _end>_start; _end--){ FreezeInfo storage fInfo = freezeOf[_step][_end-1]; uint256 _amount = fInfo.amount; balanceOf[fInfo.user] += _amount; delete freezeOf[_step][_end-1]; lastFreezeSeq[_step]--; emit Unfreeze(fInfo.user, _amount); } }",
+        "vulnerability": "Lack of Event Emission for Completion",
+        "reason": "The function unfreezes tokens but does not emit an event indicating when the process is complete, making it difficult for external systems to track completion."
+    },
+    {
+        "function_name": "transfer",
+        "code": "function transfer(address _to, uint256 _value) realUser(_to) moreThanZero(_value) public returns (bool) { require(balanceOf[msg.sender] >= _value); require(balanceOf[_to] + _value > balanceOf[_to]); balanceOf[msg.sender] = balanceOf[msg.sender] - _value; balanceOf[_to] = balanceOf[_to] + _value; emit Transfer(msg.sender, _to, _value); return true; }",
+        "vulnerability": "Reentrancy Attack",
+        "reason": "The function does not prevent reentrancy attacks. If the _to address is a malicious contract, it could call back into transfer and drain the tokens."
+    },
+    {
+        "function_name": "transferMulti",
+        "code": "function transferMulti(address[] _to, uint256[] _value) public returns (uint256 amount){ require(_to.length == _value.length); uint8 len = uint8(_to.length); for(uint8 j; j<len; j++){ amount += _value[j]*10**uint256(decimals); } require(balanceOf[msg.sender] >= amount); for(uint8 i; i<len; i++){ address _toI = _to[i]; uint256 _valueI = _value[i]*10**uint256(decimals); balanceOf[_toI] += _valueI; balanceOf[msg.sender] -= _valueI; emit Transfer(msg.sender, _toI, _valueI); } }",
+        "vulnerability": "Potential for Overflow",
+        "reason": "The function calculates the total amount without proper checks, potentially leading to overflow if the input values are large enough."
     }
 ]

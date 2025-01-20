@@ -23,11 +23,44 @@ You should only output in below json format:
 }
 `
 export const auditor_agent_prompt = auditor_prompt +
-    // auditor_format_constrain +
+    auditor_format_constrain +
     topk_prompt1 + topk_prompt2;
 
 // ####### Multi Language Prompt #######
-export const multi_language_prompt = `Please translate the audit results into [{language}].
+const multi_language_constrain = `
+You should only output in below json format:
+{
+  "output_list": {
+    "<language1>": [
+      {
+        "reason": "<reason_1 for language1>",
+        "vulnerability": "<short_vulnera_desc_1 for language1>",
+        "criticism": "<criticism1 for language1>"
+      },
+      {
+        "reason": "<reason_2 for language1>",
+        "vulnerability": "<short_vulnera_desc_2 for language1>",
+        "criticism": "<criticism2 for language1>"
+      }
+    ],
+    "<language2>": [
+      {
+        "reason": "<reason_1 for language2>",
+        "vulnerability": "<short_vulnera_desc_1 for language2>",
+        "criticism": "<criticism1 for language2>"
+      },
+      {
+        "reason": "<reason_2 for language2>",
+        "vulnerability": "<short_vulnera_desc_2 for language2>",
+        "criticism": "<criticism2 for language2>"
+      }
+    ]
+  }
+}
+`
+
+export const multi_language_prompt = multi_language_constrain+`
+Please translate the audit results into [{language}].
 audit result:
 
 {audit_result}
@@ -101,4 +134,5 @@ You should only output in below json format:
 export const critic_prompt = critic_few_shot_prompt+`
 audit result:
 {audit_result}
-`
+
+`+critic_format_constrain;

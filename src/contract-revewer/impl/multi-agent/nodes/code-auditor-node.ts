@@ -1,11 +1,13 @@
-import {AgentState, NodeName} from "../state";
+import {AgentState, AuditResult, NodeName} from "../state";
 import {RunnableConfig} from "@langchain/core/runnables";
 import {getLLm} from "../llm";
 import {HumanMessage, SystemMessage} from "@langchain/core/messages";
 import {auditor_agent_prompt} from "../prompts";
-import {AuditorOutputSchema} from "../scheam";
+import {jsonParse} from "../../../utiils";
 
-const llm = getLLm().withStructuredOutput(AuditorOutputSchema);
+const llm = getLLm();
+
+// .withStructuredOutput(AuditorOutputSchema);
 
 export async function CodeAuditorNode(
     state: typeof AgentState.State,
@@ -15,13 +17,12 @@ export async function CodeAuditorNode(
     if (state.sender == NodeName.USER) {
         const code = state.code;
         const systemMessage = new SystemMessage({content: auditor_agent_prompt.replace('{topk}', '20').replace('{code}', code)});
-        let auditOutput = await llm.invoke([
+        let auditOutput = jsonParse((await llm.invoke([
             systemMessage
-        ], config)
+        ], config)).content as string).output_list as AuditResult;
         return {
             messages: [systemMessage, new HumanMessage({content: 'code audit finished', name: name})],
-            // @ts-ignore
-            auditOutput: auditOutput.output_list,
+            auditOutput: auditOutput,
             sender: name,
         };
     }

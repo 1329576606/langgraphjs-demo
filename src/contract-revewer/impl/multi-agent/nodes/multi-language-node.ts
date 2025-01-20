@@ -1,11 +1,13 @@
 import {getLLm} from "../llm";
-import {MultiLanguageAuditorResultSchema} from "../scheam";
 import {AgentState, AuditResult, NodeName} from "../state";
 import {RunnableConfig} from "@langchain/core/runnables";
 import {HumanMessage, SystemMessage} from "@langchain/core/messages";
 import {multi_language_prompt} from "../prompts";
+import {jsonParse} from "../../../utiils";
 
-const llm = getLLm().withStructuredOutput(MultiLanguageAuditorResultSchema);
+const llm = getLLm();
+
+// .withStructuredOutput(MultiLanguageAuditorResultSchema);
 
 export async function multiLanguageNode(
     state: typeof AgentState.State,
@@ -23,14 +25,14 @@ export async function multiLanguageNode(
                     })
                 )))
         });
-        let multiLanguageOutput = await llm.invoke([
+        let multiLanguageOutput = jsonParse((await llm.invoke([
             systemMessage
-        ], config)
+        ], config)).content as string).output_list as Record<string, any>;
         return {
             messages: [systemMessage, new HumanMessage({content: 'translate finished', name: name})],
             // @ts-ignore
-            multiLanguageCriticOutput: multiLanguageOutput.output_list.reduce((record, b) => {
-                record[b.language] = b.multiLanguageOutput.map((item, index) => ({
+            multiLanguageCriticOutput: multiLanguageOutput.reduce((record, b) => {
+                record[b.language] = b.multiLanguageOutput.map((item: any, index: number) => ({
                     ...state.criticOutput[index],
                     ...item,
                 }));
