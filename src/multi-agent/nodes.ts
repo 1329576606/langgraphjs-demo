@@ -31,11 +31,11 @@ async function runAgentNode(props: {
 }
 
 const llm = new ChatOpenAI({
-    model: process.env["MODULE"],
+    model: process.env["MODEL"],
     temperature: 0,
 }, {
     apiKey: process.env['OPENAI_API_KEY'],
-    baseURL: process.env["OPENAPI_URL"],
+    baseURL: process.env["OPENAI_URL"],
 });
 
 export async function researchNode(

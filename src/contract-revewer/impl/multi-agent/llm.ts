@@ -2,10 +2,10 @@ import {ChatOpenAI} from "@langchain/openai";
 
 export function getLLm() {
     return new ChatOpenAI({
-        model: process.env["MODULE"],
+        model: process.env["MODEL"],
         temperature: 0,
         verbose: process.env["VERBOSE"] == "true",
-        configuration: {
+        configuration: process.env["LOG_FETCH"] != "true" ? {}: {
             fetch: (url: string, init: RequestInit) => {
                 console.log('\n=== OpenAI HTTP Request ===');
                 console.log('URL:', url);
@@ -28,6 +28,6 @@ export function getLLm() {
         }
     }, {
         apiKey: process.env['OPENAI_API_KEY'],
-        baseURL: process.env["OPENAPI_URL"],
+        baseURL: process.env["OPENAI_URL"],
     });
 }
