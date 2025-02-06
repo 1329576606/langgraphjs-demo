@@ -7,6 +7,7 @@ export function getLLm() {
         verbose: process.env["VERBOSE"] == "true",
         maxTokens:8192,
         timeout: 10000000,
+        streaming: true,
         configuration: process.env["LOG_FETCH"] != "true" ? {}: {
             fetch: (url: string, init: RequestInit) => {
                 console.log('\n=== OpenAI HTTP Request ===');
