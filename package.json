@@ -10,7 +10,7 @@
     "@langchain/anthropic": "^0.3.11",
     "@langchain/community": "^0.3.24",
     "@langchain/core": "^0.3.29",
-    "@langchain/langgraph": "^0.2.39",
+    "@langchain/langgraph": "^0.2.41",
     "@langchain/openai": "^0.3.17",
     "dotenv": "^16.4.7",
     "esm-hook": "^0.1.4",
